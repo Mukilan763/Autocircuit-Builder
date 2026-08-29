@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AutoCircuit Builder — automobile electrical &amp; mechanical systems, made simple</title>
+<meta name="description" content="Drag-and-drop, browser-based tool for building and simulating a car's electrical and mechanical systems — battery to headlight, engine to wheels. No install, no account, no CAD complexity.">
+<meta name="theme-color" content="#7c5cff">
+<meta property="og:title" content="AutoCircuit Builder">
+<meta property="og:description" content="Build and simulate a whole car's electrical and mechanical systems by dragging parts onto a canvas and wiring them up.">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔧</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<script>
+  // Applied synchronously, before first paint, so switching to Dark/Neon/etc.
+  // doesn't flash the Light theme for a frame on every reload.
+  try {
+    var t = localStorage.getItem('autocircuit-app-theme');
+    if (t) document.documentElement.dataset.theme = t;
+  } catch (e) {}
+</script>
+</head>
+<body data-mood="elec">
+
+<header class="topbar">
+  <div class="brand">🔧 <span>AutoCircuit Builder</span></div>
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="elec">⚡ Electrical</button>
+    <button class="tab-btn" data-tab="mech">⚙️ Mechanical</button>
+    <button class="tab-btn" data-tab="community">🌍 Community</button>
+  </div>
+  <div class="theme-picker">
+    <button id="btn-theme" class="btn icon-btn" title="Change theme" aria-haspopup="true" aria-expanded="false">🎨 Theme</button>
+    <div id="theme-popover" class="theme-popover" role="menu" aria-label="Choose a theme">
+      <button class="theme-swatch" data-theme-value="light" role="menuitem"><span class="theme-swatch-dot theme-dot-light"></span>☀️ Light</button>
+      <button class="theme-swatch" data-theme-value="dark" role="menuitem"><span class="theme-swatch-dot theme-dot-dark"></span>🌙 Dark</button>
+      <button class="theme-swatch" data-theme-value="neon" role="menuitem"><span class="theme-swatch-dot theme-dot-neon"></span>🌆 Neon</button>
+      <button class="theme-swatch" data-theme-value="blueprint" role="menuitem"><span class="theme-swatch-dot theme-dot-blueprint"></span>📐 Blueprint</button>
+      <button class="theme-swatch" data-theme-value="candy" role="menuitem"><span class="theme-swatch-dot theme-dot-candy"></span>🍬 Candy</button>
+    </div>
+  </div>
+  <button id="btn-help" class="btn accent">? Help</button>
+</header>
+
+<!-- ======================= ELECTRICAL PANEL ======================= -->
+<div id="panel-elec" class="app-panel active">
+  <div class="toolbar-row">
+    <button id="btn-new-elec" class="btn">New</button>
+    <button id="btn-undo-elec" class="btn tone-blue" title="Undo (Ctrl+Z)" disabled>↺ Undo</button>
+    <button id="btn-redo-elec" class="btn tone-blue" title="Redo (Ctrl+Y)" disabled>↻ Redo</button>
+    <span class="divider"></span>
+    <button id="btn-zoom-out-elec" class="btn icon-btn" title="Zoom out" aria-label="Zoom out">−</button>
+    <span id="zoom-label-elec" class="zoom-label">100%</span>
+    <button id="btn-zoom-in-elec" class="btn icon-btn" title="Zoom in" aria-label="Zoom in">+</button>
+    <button id="btn-zoom-reset-elec" class="btn" title="Reset zoom">Reset</button>
+    <span class="divider"></span>
+    <button id="btn-save-elec" class="btn tone-green">Save</button>
+    <button id="btn-load-elec" class="btn tone-green">Load</button>
+    <button id="btn-export-elec" class="btn tone-green" title="Save the canvas as a PNG image">📸 Export</button>
+    <input id="file-input-elec" type="file" accept="application/json" hidden>
+    <span class="divider"></span>
+    <select id="examples-select-elec" class="select" title="Example circuits" aria-label="Example circuits"></select>
+    <button id="btn-load-example-elec" class="btn">Load Example</button>
+    <span class="divider"></span>
+    <button id="btn-publish-elec" class="btn accent" title="Share this build with the community">🌍 Publish</button>
+  </div>
+
+  <main class="app">
+    <aside class="panel palette" id="palette-elec">
+      <h2>Parts</h2>
+      <p class="panel-hint">Drag a part onto the canvas, or click it to drop it in. Click a category to collapse it.</p>
+      <input id="palette-search-elec" class="search-input" type="search" placeholder="Search parts…" aria-label="Search parts">
+      <div id="palette-recent-elec" class="recent-strip"></div>
+      <div id="palette-list-elec"></div>
+    </aside>
+
+    <section class="canvas-area">
+      <div class="canvas-wrap">
+        <svg id="canvas-svg-elec" class="panel-elec" width="1700" height="1100" viewBox="0 0 1700 1100"></svg>
+        <div id="canvas-empty-elec" class="canvas-empty-hint">
+          <div class="canvas-empty-emoji">🔌</div>
+          <p>Your canvas is empty — drag a part in, or</p>
+          <button class="btn accent" data-empty-example>✨ Load an example</button>
+        </div>
+      </div>
+      <div id="status-bar-elec" class="status-bar">0 parts · 0 wires</div>
+    </section>
+
+    <aside class="panel inspector" id="inspector-elec">
+      <h2>Inspector</h2>
+      <div id="inspector-body-elec"></div>
+    </aside>
+  </main>
+</div>
+
+<!-- ======================= MECHANICAL PANEL ======================= -->
+<div id="panel-mech" class="app-panel">
+  <div class="toolbar-row">
+    <button id="btn-new-mech" class="btn">New</button>
+    <button id="btn-undo-mech" class="btn tone-blue" title="Undo (Ctrl+Z)" disabled>↺ Undo</button>
+    <button id="btn-redo-mech" class="btn tone-blue" title="Redo (Ctrl+Y)" disabled>↻ Redo</button>
+    <span class="divider"></span>
+    <button id="btn-zoom-out-mech" class="btn icon-btn" title="Zoom out" aria-label="Zoom out">−</button>
+    <span id="zoom-label-mech" class="zoom-label">100%</span>
+    <button id="btn-zoom-in-mech" class="btn icon-btn" title="Zoom in" aria-label="Zoom in">+</button>
+    <button id="btn-zoom-reset-mech" class="btn" title="Reset zoom">Reset</button>
+    <span class="divider"></span>
+    <button id="btn-save-mech" class="btn tone-green">Save</button>
+    <button id="btn-load-mech" class="btn tone-green">Load</button>
+    <button id="btn-export-mech" class="btn tone-green" title="Save the canvas as a PNG image">📸 Export</button>
+    <input id="file-input-mech" type="file" accept="application/json" hidden>
+    <span class="divider"></span>
+    <select id="examples-select-mech" class="select" title="Example circuits" aria-label="Example circuits"></select>
+    <button id="btn-load-example-mech" class="btn">Load Example</button>
+    <span class="divider"></span>
+    <button id="btn-efficiency-mech" class="btn accent">📊 Efficiency</button>
+    <span class="divider"></span>
+    <button id="btn-publish-mech" class="btn accent" title="Share this build with the community">🌍 Publish</button>
+  </div>
+
+  <main class="app">
+    <aside class="panel palette" id="palette-mech">
+      <h2>Parts</h2>
+      <p class="panel-hint">Drag a part onto the canvas, or click it to drop it in. Click a category to collapse it.</p>
+      <input id="palette-search-mech" class="search-input" type="search" placeholder="Search parts…" aria-label="Search parts">
+      <div id="palette-recent-mech" class="recent-strip"></div>
+      <div id="palette-list-mech"></div>
+    </aside>
+
+    <section class="canvas-area">
+      <div class="canvas-wrap">
+        <svg id="canvas-svg-mech" class="panel-mech" width="1700" height="1100" viewBox="0 0 1700 1100"></svg>
+        <div id="canvas-empty-mech" class="canvas-empty-hint">
+          <div class="canvas-empty-emoji">🔧</div>
+          <p>Your canvas is empty — drag a part in, or</p>
+          <button class="btn accent" data-empty-example>✨ Load an example</button>
+        </div>
+      </div>
+      <div id="status-bar-mech" class="status-bar">0 parts · 0 wires</div>
+    </section>
+
+    <aside class="panel inspector" id="inspector-mech">
+      <h2>Inspector</h2>
+      <div id="inspector-body-mech"></div>
+    </aside>
+  </main>
+</div>
+
+<!-- ======================= COMMUNITY PANEL ======================= -->
+<div id="panel-community" class="app-panel">
+  <div class="toolbar-row">
+    <select id="community-filter-domain" class="select" title="Filter by workbench" aria-label="Filter by workbench">
+      <option value="">All builds</option>
+      <option value="elec">⚡ Electrical</option>
+      <option value="mech">⚙️ Mechanical</option>
+    </select>
+    <select id="community-sort" class="select" title="Sort" aria-label="Sort">
+      <option value="new">🆕 Newest</option>
+      <option value="liked">❤️ Most liked</option>
+    </select>
+    <button id="btn-community-refresh" class="btn">↻ Refresh</button>
+  </div>
+  <div class="community-area">
+    <p class="panel-hint community-lead">Everything published here is public — anyone can see it, like it, comment on it, or load it into their own canvas to remix. Use the 🌍 Publish button in either workbench's toolbar to share your own.</p>
+    <div id="community-status" class="community-status"></div>
+    <div id="community-feed" class="community-feed"></div>
+  </div>
+</div>
+
+<div id="publish-modal" class="modal">
+  <div class="modal-card">
+    <button id="publish-close" class="modal-close" aria-label="Close">✕</button>
+    <h2>🌍 Publish to the Community</h2>
+    <p class="panel-hint">Anyone can see, like, comment on, and remix a published build — don't include anything private. There's no login, so anyone can pick any display name; you'll get a one-time link on this device to delete it later if you change your mind.</p>
+    <label class="field"><span>Your name</span><input id="publish-name" type="text" maxlength="40" placeholder="e.g. Alex"></label>
+    <label class="field"><span>Title</span><input id="publish-title" type="text" maxlength="80" placeholder="e.g. Simple headlight circuit"></label>
+    <label class="field"><span>Description (optional)</span><input id="publish-desc" type="text" maxlength="300" placeholder="What does it do?"></label>
+    <p id="publish-error" class="warning" hidden></p>
+    <button id="publish-submit" class="btn accent big">🚀 Publish</button>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<div id="welcome-modal" class="modal">
+  <div class="modal-card welcome-card">
+    <button id="welcome-close" class="modal-close" aria-label="Close">✕</button>
+    <div class="welcome-emoji">🚗⚡🔧</div>
+    <h2>Welcome to AutoCircuit Builder!</h2>
+    <p class="welcome-lead">Build a whole car's electrical and mechanical guts by dragging parts around and wiring them up — <strong>no manual, no login, no CAD degree required.</strong> Flip a switch, start an engine, and watch it react instantly.</p>
+    <ul class="welcome-points">
+      <li>⚡ <strong>Electrical</strong> — battery, lights, relays, ignition systems</li>
+      <li>⚙️ <strong>Mechanical</strong> — engine, gearbox, brakes, live gauges</li>
+      <li>🎨 Drag, click, and play — nothing here can "break"</li>
+    </ul>
+    <div class="welcome-actions">
+      <button id="welcome-example" class="btn accent big">✨ Show me a working example</button>
+      <button id="welcome-explore" class="btn big">🚀 I'll just poke around</button>
+    </div>
+  </div>
+</div>
+
+<div id="efficiency-modal" class="modal">
+  <div class="modal-card eff-card">
+    <button id="efficiency-close" class="modal-close" aria-label="Close">✕</button>
+    <h2>📊 Power &amp; Efficiency</h2>
+    <p class="panel-hint">Live — stays in sync as you change the throttle, gears, or any part's efficiency rating.</p>
+    <div id="efficiency-body"></div>
+  </div>
+</div>
+
+<div id="help-modal" class="modal">
+  <div class="modal-card">
+    <button id="help-close" class="modal-close" aria-label="Close">✕</button>
+    <h2>How to build a circuit</h2>
+    <p class="panel-hint">There are two workbenches — switch between them with the <strong>⚡ Electrical</strong> / <strong>⚙️ Mechanical</strong> tabs at the top. Everything below applies to both.</p>
+    <ol>
+      <li><strong>Add parts.</strong> Drag anything from the left panel onto the canvas, or click it to drop it in. Use the search box once the parts list gets long.</li>
+      <li><strong>Wire them up.</strong> Click and drag from one colored dot (terminal) to another to connect them — terminals glow while you're dragging to show where you can drop.</li>
+      <li><strong>Try it live.</strong> No "Run" button — flip a switch, start the engine, press the brake — if there's a complete path, it powers up instantly: bulbs glow, wheels spin, gauges move.</li>
+      <li><strong>Electrical:</strong> every "Ground" part and the battery's − terminal are automatically one shared point, like a real car's chassis. Fuses blow on overload. A diode only lets current flow anode → cathode. A push button only powers things while held; an ignition switch cycles OFF/ACC/ON/START.</li>
+      <li><strong>Mechanical:</strong> power flows from a running <em>Engine</em> through a gear other than Neutral/Park to the wheels — the <em>Clutch Pedal</em> is engaged by default (like a real one) and only disconnects power while you're <em>holding it down</em>, e.g. to shift safely. Braking is a <em>separate</em> network — press the <em>Brake Pedal</em> (or engage the <em>Parking Brake</em>) and it overrides wheel spin, even mid-drive. Drag the Engine's throttle and watch every gauge, pump, and spinning part react live — push it near redline and things start glowing red.</li>
+      <li><strong>Click anything to edit it.</strong> The first click just selects a part and opens the inspector — even a running one — so looking at something never accidentally shuts it off; click it again (now that it's selected) to flip its switch/cycle/toggle. Rename it, change ratings, rotate it (or press <code>R</code>), or delete it there too.</li>
+      <li><strong>Pan and zoom the canvas</strong> like Tinkercad — click and drag any empty patch of grid to pan around, and scroll the mouse wheel to zoom in/out right where the cursor is.</li>
+      <li><strong>Made a mistake?</strong> Undo/Redo (Ctrl+Z / Ctrl+Y) — each tab keeps its own history.</li>
+    </ol>
+    <p class="panel-hint">Not sure where to start? Use <strong>Load Example</strong> in either tab's toolbar to load a working build and start flipping switches.</p>
+    <h2 style="margin-top:18px">Keyboard shortcuts</h2>
+    <div class="shortcut-grid">
+      <span><kbd>R</kbd></span><span>Rotate the selected part 90°</span>
+      <span><kbd>Ctrl</kbd>+<kbd>D</kbd></span><span>Duplicate the selected part</span>
+      <span><kbd>Delete</kbd></span><span>Delete the selected part or wire</span>
+      <span><kbd>Ctrl</kbd>+<kbd>Z</kbd></span><span>Undo</span>
+      <span><kbd>Ctrl</kbd>+<kbd>Y</kbd></span><span>Redo (or <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd>)</span>
+      <span>Scroll wheel</span><span>Zoom in/out, anchored on the cursor</span>
+      <span>Drag empty canvas</span><span>Pan the view around</span>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
