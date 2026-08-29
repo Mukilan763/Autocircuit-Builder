@@ -19,10 +19,16 @@ every boot — no separate migration step or ORM.
 
 ## Deploying your own
 
-1. **Create a Postgres database.** Any Postgres 13+ works; this project
-   was built against [Render's free Postgres](https://render.com) tier.
-   Note Render's free databases **expire after 30 days** unless upgraded —
-   fine for trying this out, not for anything you want to keep running.
+1. **Create a Postgres database.** Any Postgres 13+ works. The live
+   deployment runs on [Neon](https://neon.com)'s free tier — its engine is
+   open source (Apache-2.0), and unlike Render's free Postgres (which is
+   **deleted 30 days after creation**, no exceptions), Neon's free projects
+   don't have a forced expiration; an idle project's *compute* just
+   suspends and wakes back up on the next request, with a few seconds'
+   cold-start delay. [Supabase](https://supabase.com) is a solid
+   alternative with a different idle behavior (pauses after 7 days of no
+   activity, requires a manual "Resume" click in its dashboard — good for
+   under a year, just not self-healing the way Neon's is).
 2. **Deploy this folder as a web service**, with:
    - Build command: `npm install`
    - Start command: `npm start`
