@@ -32,7 +32,10 @@ so the canvas itself looks colorful before anything's even powered on; and
 several lights let you pick their exact color yourself, so no two builds
 have to look alike.
 
-It's plain HTML/CSS/JavaScript. No build step, no framework, no dependencies.
+The app itself is plain HTML/CSS/JavaScript — no build step, no framework,
+no dependencies. The one exception is the **🌍 Community** tab (see below),
+which needs a small deployed backend, because "other people can see it" is
+the one thing a purely static, no-backend app can never do on its own.
 
 ## Running it
 
@@ -47,6 +50,30 @@ Then open **http://localhost:8420** in a browser.
 
 (If you're using this inside Claude Code, the Browser pane already knows how
 to launch this via `.claude/launch.json` — just ask to preview it.)
+
+## 🌍 Community
+
+Publish a build — title, your name, an optional description — and it shows
+up for *everyone*, with a live-rendered preview of the actual circuit (the
+same part artwork the canvas uses, statically laid out — no screenshots, no
+image hosting). Anyone can:
+
+- **❤️ Like** it (one like per browser, toggle to unlike).
+- **💬 Comment** on it.
+- **🚗 Load it into their own canvas** to remix — this is the one place in
+  the app where someone else's work becomes the starting point for yours.
+
+There's no login — publishing or commenting just asks for a display name,
+and hands back a one-time delete link this browser remembers, so you (and
+only you) can take down your own posts later. Filter the feed by workbench
+or sort by newest/most-liked from the toolbar.
+
+This tab talks to a small separately-deployed backend (Express + Postgres —
+see [`server/README.md`](server/README.md)) rather than `localStorage`,
+since likes and comments have to be visible to people who never opened your
+browser. If that backend isn't configured or is unreachable, the tab says
+so plainly instead of silently failing — everything else in the app keeps
+working exactly as before regardless.
 
 ## Electrical panel
 
@@ -281,11 +308,17 @@ js/mechParts.js         mechanical parts library
 js/mechSimulate.js      mechanical solver
 js/mechExamples.js      mechanical example builds
 js/mechEfficiency.js    the live Power & Efficiency graph panel
+js/exportImage.js       canvas → downloadable PNG snapshot
+js/community.js         the Community tab: publish/browse/like/comment/remix
+js/communityConfig.js   one line pointing the Community tab at its backend
 js/main.js             bootstraps both panels + shared tabs/help/toast
+server/                 the Community tab's backend (Express + Postgres) — see server/README.md
 ```
 
-There's no backend and no build tooling by design — open the files and you
-can see the whole app.
+No build tooling, by design — open the files and you can see the whole
+app. The one thing that isn't purely static files is `server/`, the small
+deployed backend the Community tab talks to (see the section above);
+everything else here still needs nothing but a plain file server.
 
 ### Adding a new part
 
