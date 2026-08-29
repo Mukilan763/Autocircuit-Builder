@@ -1,5 +1,7 @@
 # AutoCircuit Builder
 
+**🚀 Live: [autocircuit-builder.onrender.com](https://autocircuit-builder.onrender.com)**
+
 A tiny, browser-based tool with **two workbenches** for building and
 simulating how a car actually works:
 
