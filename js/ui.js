@@ -4,6 +4,8 @@
 // modal and toast are shared app-wide and wired up separately in main.js.
 import { catSlug, getCycle } from './canvas.js';
 import { exportSvgAsPng } from './exportImage.js';
+import { sound } from './sound.js';
+import { unlock } from './achievements.js';
 
 export function createPanel({ store, partDefs, categoryColors, viewport, history, examples, dom, showToast }) {
   let currentSelection = null;
@@ -108,6 +110,8 @@ export function createPanel({ store, partDefs, categoryColors, viewport, history
     placeCounter++;
     store.addComponent(type, x, y);
     recordRecent(type);
+    sound.place();
+    unlock('first-part');
   }
 
   function setupCanvasDrop() {
@@ -120,6 +124,8 @@ export function createPanel({ store, partDefs, categoryColors, viewport, history
       const p = viewport.toSvgPoint(e.clientX, e.clientY);
       store.addComponent(type, Math.round((p.x - def.w / 2) / 10) * 10, Math.round((p.y - def.h / 2) / 10) * 10);
       recordRecent(type);
+      sound.place();
+      unlock('first-part');
     });
   }
 
@@ -205,7 +211,7 @@ export function createPanel({ store, partDefs, categoryColors, viewport, history
         const suffix = dom.canvasSvg.id.replace('canvas-svg-', '');
         const bg = getComputedStyle(dom.canvasSvg.parentElement).backgroundColor;
         exportSvgAsPng(dom.canvasSvg, `autocircuit-${suffix}.png`, bg)
-          .then(() => { if (showToast) showToast('📸 Snapshot saved!'); })
+          .then(() => { unlock('export'); if (showToast) showToast('📸 Snapshot saved!'); })
           .catch(() => { if (showToast) showToast('Could not export the image — try again.'); });
       });
     }
@@ -454,12 +460,15 @@ export function createPanel({ store, partDefs, categoryColors, viewport, history
     body.appendChild(mkButton('⧉ Duplicate (Ctrl+D)', '', () => {
       const copy = store.duplicateComponent(comp.id);
       if (copy) {
+        sound.place();
+        unlock('duplicate');
         currentSelection = { kind: 'component', id: copy.id };
         renderInspector();
       }
     }));
 
     body.appendChild(mkButton('Delete Part', 'danger', () => {
+      sound.delete();
       store.removeComponent(comp.id);
       currentSelection = null;
       renderInspector();

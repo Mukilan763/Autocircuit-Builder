@@ -11,6 +11,8 @@
 // lets you delete your own posts later.
 import { catSlug } from './canvas.js';
 import { COMMUNITY_API_BASE } from './communityConfig.js';
+import { sound } from './sound.js';
+import { unlock } from './achievements.js';
 
 const MY_TOKENS_KEY = 'autocircuit-community-tokens'; // { builds: {id: token}, comments: {id: token} }
 const NAME_KEY = 'autocircuit-community-name';
@@ -191,6 +193,8 @@ export function createCommunityPage({ stores, partDefs, examples, dom, showToast
       localStorage.setItem(NAME_KEY, authorName);
       rememberToken('builds', result.id, result.editToken);
       closePublish();
+      sound.publish();
+      unlock('publish');
       if (showToast) showToast('🌍 Published! Check it out on the Community tab.');
       loaded = false; // force a refresh next time the feed is viewed
       if (dom.communityPanel.classList.contains('active')) loadFeed();
@@ -288,6 +292,8 @@ export function createCommunityPage({ stores, partDefs, examples, dom, showToast
       });
       btn.textContent = `❤️ ${result.likeCount}`;
       btn.classList.toggle('active', result.liked);
+      sound.click();
+      if (result.liked) unlock('liked-one');
     } catch (e) {
       if (showToast) showToast('⚠ ' + e.message);
     } finally {
@@ -347,6 +353,8 @@ export function createCommunityPage({ stores, partDefs, examples, dom, showToast
           textInput.value = '';
           build.comment_count++;
           commentBtn.textContent = `💬 ${build.comment_count}`;
+          sound.click();
+          unlock('commented');
           commentsLoadedRerender();
         } catch (e) { if (showToast) showToast('⚠ ' + e.message); }
         finally { sendBtn.disabled = false; }
@@ -367,6 +375,8 @@ export function createCommunityPage({ stores, partDefs, examples, dom, showToast
     if (store.state.components.length && !confirm(`Load "${build.title}"? This replaces your current ${domainLabel(build.domain)} circuit.`)) return;
     store.loadFromJSON(build.circuit_json);
     document.querySelector(`.tab-btn[data-tab="${build.domain}"]`).click();
+    sound.place();
+    unlock('remix');
     if (showToast) showToast(`🚗 Loaded "${build.title}" — remix away!`);
   }
 

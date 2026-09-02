@@ -14,14 +14,22 @@ import { simulate as simulateMech } from './mechSimulate.js';
 import { MECH_EXAMPLES } from './mechExamples.js';
 import { createEfficiencyPanel } from './mechEfficiency.js';
 import { createCommunityPage } from './community.js';
+import { sound } from './sound.js';
+import { setOnUnlock, getProgress, recordThemeTried } from './achievements.js';
 
 let toastTimer = null;
-function showToast(msg) {
+// `cls` adds a temporary modifier class (e.g. "achievement") for a toast
+// that should look and feel more celebratory than the usual status message.
+function showToast(msg, cls) {
   const el = document.getElementById('toast');
   el.textContent = msg;
   el.classList.add('show');
+  if (cls) el.classList.add(cls);
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.classList.remove('show'), 5000);
+  toastTimer = setTimeout(() => {
+    el.classList.remove('show');
+    if (cls) el.classList.remove(cls);
+  }, 5000);
 }
 
 function bootPanel({ partDefs, categoryColors, simulateFn, examples, storageKey, domSuffix }) {
@@ -182,6 +190,7 @@ themeBtn.addEventListener('click', () => {
 });
 themeSwatches.forEach(s => s.addEventListener('click', () => {
   applyTheme(s.dataset.themeValue);
+  recordThemeTried(s.dataset.themeValue);
   closeThemePopover();
 }));
 document.addEventListener('click', e => {
@@ -191,6 +200,60 @@ document.addEventListener('click', e => {
 });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeThemePopover(); });
 applyTheme(localStorage.getItem(THEME_KEY) || 'light');
+
+// --------------------------------------------------------------- Sound
+const soundBtn = document.getElementById('btn-sound');
+function updateSoundBtn() {
+  soundBtn.textContent = sound.isMuted() ? '🔇' : '🔊';
+  soundBtn.setAttribute('aria-pressed', String(sound.isMuted()));
+  const label = sound.isMuted() ? 'Unmute sounds' : 'Mute sounds';
+  soundBtn.title = label;
+  soundBtn.setAttribute('aria-label', label);
+}
+soundBtn.addEventListener('click', () => {
+  sound.setMuted(!sound.isMuted());
+  updateSoundBtn();
+  if (!sound.isMuted()) sound.click(); // a little confirmation blip, unmuting itself proves it works
+});
+updateSoundBtn();
+
+// ------------------------------------------------------------ Achievements
+// A small, purely-local badge system — nothing here is shared with anyone,
+// unlike the Community tab. Just a fun reason to go try the corners of the
+// app you haven't yet (every theme, every panel, every kind of action).
+const achievementsBtn = document.getElementById('btn-achievements');
+const achievementsCount = document.getElementById('achievements-count');
+const achievementsModal = document.getElementById('achievements-modal');
+const achievementsList = document.getElementById('achievements-list');
+const achievementsProgress = document.getElementById('achievements-progress');
+
+function renderAchievements() {
+  const { unlocked, total, list } = getProgress();
+  achievementsCount.textContent = `${unlocked}/${total}`;
+  achievementsProgress.textContent = `${unlocked} of ${total} unlocked`;
+  achievementsList.innerHTML = '';
+  for (const a of list) {
+    const row = document.createElement('div');
+    row.className = 'achievement-row' + (a.unlocked ? ' unlocked' : '');
+    row.innerHTML = `
+      <span class="achievement-emoji">${a.unlocked ? a.emoji : '🔒'}</span>
+      <span class="achievement-text"><strong>${a.title}</strong><br>${a.desc}</span>`;
+    achievementsList.appendChild(row);
+  }
+}
+achievementsBtn.addEventListener('click', () => {
+  renderAchievements();
+  achievementsModal.classList.add('open');
+});
+document.getElementById('achievements-close').addEventListener('click', () => achievementsModal.classList.remove('open'));
+achievementsModal.addEventListener('click', e => { if (e.target === achievementsModal) achievementsModal.classList.remove('open'); });
+
+setOnUnlock(def => {
+  sound.achievement();
+  showToast(`🏆 Achievement unlocked: ${def.title}!`, 'achievement');
+  renderAchievements(); // keep the modal's contents fresh if it's re-opened later
+});
+renderAchievements(); // paints the topbar's "N/11" count on load
 
 // -------------------------------------------------------------- Help modal
 const modal = document.getElementById('help-modal');

@@ -43,6 +43,8 @@
       <button class="theme-swatch" data-theme-value="candy" role="menuitem"><span class="theme-swatch-dot theme-dot-candy"></span>🍬 Candy</button>
     </div>
   </div>
+  <button id="btn-sound" class="btn icon-btn" title="Mute sounds" aria-pressed="false">🔊</button>
+  <button id="btn-achievements" class="btn icon-btn" title="Achievements" aria-label="Achievements">🏆 <span id="achievements-count">0/11</span></button>
   <button id="btn-help" class="btn accent">? Help</button>
 </header>
 
@@ -186,6 +188,15 @@
 
 <div id="toast" class="toast"></div>
 
+<div id="achievements-modal" class="modal">
+  <div class="modal-card">
+    <button id="achievements-close" class="modal-close" aria-label="Close">✕</button>
+    <h2>🏆 Achievements</h2>
+    <p class="panel-hint" id="achievements-progress">0 of 11 unlocked</p>
+    <div id="achievements-list" class="achievements-list"></div>
+  </div>
+</div>
+
 <div id="welcome-modal" class="modal">
   <div class="modal-card welcome-card">
     <button id="welcome-close" class="modal-close" aria-label="Close">✕</button>
@@ -232,6 +243,7 @@
     <h2 style="margin-top:18px">Keyboard shortcuts</h2>
     <div class="shortcut-grid">
       <span><kbd>R</kbd></span><span>Rotate the selected part 90°</span>
+      <span><kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd></span><span>Nudge the selected part (hold <kbd>Shift</kbd> for bigger steps)</span>
       <span><kbd>Ctrl</kbd>+<kbd>D</kbd></span><span>Duplicate the selected part</span>
       <span><kbd>Delete</kbd></span><span>Delete the selected part or wire</span>
       <span><kbd>Ctrl</kbd>+<kbd>Z</kbd></span><span>Undo</span>

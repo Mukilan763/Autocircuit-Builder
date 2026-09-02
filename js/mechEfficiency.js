@@ -4,6 +4,7 @@
 // currently engaged, both built from computeDrivelineSummary() so they
 // never disagree with the gauges on the canvas.
 import { computeDrivelineSummary } from './mechSimulate.js';
+import { unlock } from './achievements.js';
 
 const STAGE_COLORS = {
   engine: '#7c5cff',
@@ -102,6 +103,7 @@ export function createEfficiencyPanel({ store, dom }) {
   function render() {
     const summary = computeDrivelineSummary(store.state);
     dom.body.innerHTML = buildBody(summary);
+    if (summary.topSpeedKmh >= 250) unlock('speed-demon');
   }
 
   dom.openBtn.addEventListener('click', () => {

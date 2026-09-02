@@ -1,5 +1,8 @@
 // canvas.js — factory for an SVG workspace: rendering plus all pointer
 // interaction (drag, wire, select, rotate, zoom). One instance per panel.
+import { sound } from './sound.js';
+import { unlock } from './achievements.js';
+
 const SVGNS = 'http://www.w3.org/2000/svg';
 const GRID = 10;
 const ZOOM_MIN = 0.25, ZOOM_MAX = 3.5;
@@ -224,8 +227,10 @@ export function createViewport({ store, partDefs, simulate, svgEl }) {
             if (cycle) {
               const idx = cycle.indexOf(comp.props.position || cycle[0]);
               comp.props.position = cycle[(idx + 1) % cycle.length];
+              sound.click();
             } else if (def.toggleable) {
               comp.props.on = !comp.props.on;
+              sound.click();
             }
           }
         }
@@ -259,6 +264,7 @@ export function createViewport({ store, partDefs, simulate, svgEl }) {
     if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
     if ((e.key === 'Delete' || e.key === 'Backspace') && store.state.selection) {
       e.preventDefault();
+      sound.delete();
       store.deleteSelected();
       if (inspectCallback) inspectCallback(null);
     } else if (e.key === 'r' || e.key === 'R') {
@@ -272,7 +278,27 @@ export function createViewport({ store, partDefs, simulate, svgEl }) {
       if (store.state.selection && store.state.selection.kind === 'component') {
         e.preventDefault();
         const copy = store.duplicateComponent(store.state.selection.id);
-        if (copy && inspectCallback) inspectCallback({ kind: 'component', id: copy.id });
+        if (copy) {
+          sound.place();
+          unlock('duplicate');
+          if (inspectCallback) inspectCallback({ kind: 'component', id: copy.id });
+        }
+      }
+    } else if (e.key.startsWith('Arrow')) {
+      // Nudge the selected part by one grid step (or five, held with
+      // Shift) — the fine-control complement to free dragging, the way
+      // every real CAD/design tool lets you tap a part into exact position.
+      if (store.state.selection && store.state.selection.kind === 'component') {
+        const comp = store.getComponent(store.state.selection.id);
+        if (comp) {
+          e.preventDefault();
+          const step = e.shiftKey ? GRID * 5 : GRID;
+          if (e.key === 'ArrowUp') comp.y -= step;
+          else if (e.key === 'ArrowDown') comp.y += step;
+          else if (e.key === 'ArrowLeft') comp.x -= step;
+          else if (e.key === 'ArrowRight') comp.x += step;
+          store.notify();
+        }
       }
     }
   }
@@ -373,6 +399,9 @@ export function createViewport({ store, partDefs, simulate, svgEl }) {
       const engaging = isEngaging(sim.compStates[c.id]);
       if (engaging && !prevActive.get(c.id) && !dragState) {
         spawnSpark(c.x + def.w / 2, c.y + def.h / 2);
+        sound.powerOn();
+        unlock('power-on');
+        if (c.type === 'engine') unlock('engine-start');
       }
       prevActive.set(c.id, engaging);
 

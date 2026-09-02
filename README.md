@@ -197,7 +197,9 @@ directly to watch the needle move and the warning zone light up red.
   color is read live off the canvas, not hardcoded), so it's easy to share a
   build outside the app or drop it in a writeup.
 - **Rotate** parts (button, or press `R`) and **zoom** in/out for bigger,
-  more complex builds.
+  more complex builds. Nudge a selected part into exact position with the
+  **arrow keys** (hold `Shift` for a bigger step) instead of only free-hand
+  dragging.
 - **Undo/redo** (Ctrl+Z / Ctrl+Y) — each tab keeps its own independent
   history, so switching tabs never mixes them up.
 - **Save/Load** a build as `.json`; each panel also autosaves to the
@@ -252,6 +254,25 @@ edge cases like Blueprint's near-white accent needing its own
 `--text-on-accent` override so button text stays legible, which itself gets
 reset back to white under Mechanical's blue mood (whose accent is never
 white) rather than inheriting Blueprint's override.
+
+## 🔊 Sound & 🏆 Achievements
+
+The app has an audible personality now — every synthesized (not a single
+audio file, just Web Audio API oscillators, matching the "no dependencies"
+rule) tone for placing a part, flipping a switch, deleting something,
+powering on for the first time, publishing, and unlocking an achievement.
+The 🔊 button in the topbar mutes it all, remembered across visits.
+
+**🏆 Achievements** is a small, purely local badge system — 11 of them,
+spanning both workbenches and the Community tab: your first part, your
+first power-on, starting an Engine, hitting 250+ km/h, duplicating,
+exporting, trying all 5 themes, publishing, liking someone else's build,
+commenting, and remixing a community build into your own canvas. Nothing
+here is shared with anyone (unlike the Community tab's genuinely public
+data) — it's just a fun trail of breadcrumbs nudging you toward the corners
+of the app you haven't poked at yet. The 🏆 N/11 button in the topbar opens
+the full list; unlocking one pops a gold, distinct-from-the-usual-status
+toast and a little fanfare instead of a plain message.
 
 ## Usability
 
@@ -313,6 +334,8 @@ js/mechEfficiency.js    the live Power & Efficiency graph panel
 js/exportImage.js       canvas → downloadable PNG snapshot
 js/community.js         the Community tab: publish/browse/like/comment/remix
 js/communityConfig.js   one line pointing the Community tab at its backend
+js/sound.js             tiny synthesized (Web Audio API) sound effects
+js/achievements.js      the local 11-badge achievement system
 js/main.js             bootstraps both panels + shared tabs/help/toast
 server/                 the Community tab's backend (Express + Postgres) — see server/README.md
 ```
