@@ -312,6 +312,13 @@ toast and a little fanfare instead of a plain message.
   keeping its 258px desktop column; on very small screens (phones) it now
   gets a taller, auto-filling grid instead of the cramped fixed-height strip
   it used to be, so fewer categories require scrolling to see.
+- Fixed a real layout bug on narrow *and* short windows (a resized desktop
+  browser, a tablet in landscape): the palette and inspector's fixed
+  max-heights could together exceed the available space below 900px width,
+  squeezing the canvas — the one thing you actually build on — to a literal
+  0px and making the app unusable, not just cramped. The canvas now has a
+  height floor it's never squeezed past, and the page scrolls instead if
+  everything genuinely doesn't fit.
 - Every icon-only button (theme picker, zoom in/out, modal close buttons)
   carries an `aria-label` or visible text plus a `title` tooltip.
 - Keyboard focus is visible (`:focus-visible`) on every interactive control —

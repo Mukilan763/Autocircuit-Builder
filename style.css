@@ -817,7 +817,16 @@ kbd {
 
 /* ---------- small screens ---------- */
 @media (max-width: 900px) {
-  .app { flex-direction: column; gap: 8px; padding: 8px; }
+  /* Palette and inspector are flex-shrink:0 (a fixed max-height each), and
+     canvas-area is the only flexible one (flex:1; min-height:0) — so on a
+     viewport that's narrow *and* short (a small laptop window, a tablet in
+     landscape), their two fixed max-heights alone can exceed .app's total
+     height, squeezing the canvas to a literal 0px and making the app
+     unusable — not just cramped, actually broken, with no visible canvas
+     at all. Letting .app scroll, and giving canvas-area a floor it can
+     never be squeezed past, means the worst case is "scroll a bit" instead
+     of "the canvas vanished." */
+  .app { flex-direction: column; gap: 8px; padding: 8px; overflow-y: auto; }
   /* A fixed 220px strip was cramped once the palette went full-width — it
      forced heavy scrolling through every category. Give it real breathing
      room (still capped so the canvas keeps most of the screen) and switch
@@ -829,6 +838,7 @@ kbd {
     width: 100%; border-radius: var(--radius-md); box-shadow: none;
   }
   .palette, .inspector { max-height: min(38vh, 340px); }
+  .canvas-area { min-height: 260px; flex-shrink: 0; }
   .palette .palette-grid { grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); }
 }
 
