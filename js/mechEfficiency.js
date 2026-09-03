@@ -82,7 +82,9 @@ function buildBody(summary) {
   }
   const gearNote = summary.inGear
     ? `Currently in <strong>${escapeHtml(summary.gearLabel)}</strong> — the pink dot marks where you are on the curve right now.`
-    : `<strong>${escapeHtml(summary.gearLabel)}</strong> selected — shift into a gear to see the speed curve.`;
+    : summary.gearLabel
+      ? `<strong>${escapeHtml(summary.gearLabel)}</strong> selected — shift into a gear to see the speed curve.`
+      : `No transmission in this build yet — add one (and a differential) to see the speed curve.`;
 
   return `
     <div class="eff-stats">
