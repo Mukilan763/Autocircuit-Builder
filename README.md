@@ -111,12 +111,16 @@ build, an engine-accessories/exhaust build, and a turbo/redline showcase.
 missing entirely: speed was pure RPM × gearing × wheel size, so a tiny
 3-cylinder 1000cc engine geared tall enough could hit 290+ km/h, and a
 Turbocharger was purely decorative. Now every configuration's horsepower
-(from cylinders × displacement) sets a real power-limited top speed
+(from total displacement — ~65 hp/liter, the same regardless of cylinder
+count, since a 2.0L I4 and a 2.0L V6 make broadly similar real-world power
+rather than the V6 getting a free multiplier for having more cylinders at
+the same total displacement) sets a real power-limited top speed
 (`topSpeedFromPower` — roughly power^(1/3), since aerodynamic drag scales
 with the cube of speed), and a spooled-up turbo genuinely adds +30% power,
-raising it. Whichever wheel-size or gear-ratio trick you try, the car can't
-exceed what its engine could actually do — verified with a Node test
-harness across a dozen configurations, not just eyeballed in the browser.
+raising it. Whichever wheel-size, cylinder-count, or gear-ratio trick you
+try, the car can't exceed what its engine could actually do — verified with
+a Node test harness across a dozen configurations, not just eyeballed in
+the browser.
 Both the Speedometer and the Wheel itself show a small ⚡ and a "power
 -limited" hint when they're capped, so it's clear *why* you've hit a wall.
 
@@ -200,8 +204,10 @@ requirement — release it and it's gone. A **Supercharger** is the opposite
 personality: flip it on and it adds a steady +20% the moment the engine's
 running, no spool-up threshold like the Turbo needs. All three boosts stack
 multiplicatively if you're reckless enough to fit them all (verified: a
-turbo'd, nitrous'd 6-cylinder went from 216 hp to 402 hp with both active at
-once, top speed 265 → 310 km/h). Two new gauges round out the dash: a
+turbo'd, nitrous'd 3.0L 6-cylinder went from 195 hp to 406 hp with both
+active at once, real top speed — through an actual clutch/gearbox/
+differential, not just the raw boost — 212 → 271 km/h). Two new gauges
+round out the dash: a
 **Fuel Gauge** and **Coolant Temp Gauge**, both with a slider you can drag
 directly to watch the needle move and the warning zone light up red.
 

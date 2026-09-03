@@ -54,10 +54,19 @@ export function engineRpm(props) {
   return Math.round(idle + (throttle / 100) * (redline - idle));
 }
 
+// Power scales with *total* displacement — "Displacement (cc)" is, and has
+// always been shown as, the whole-engine figure (the default is literally
+// labeled "4-cyl, 2000cc", i.e. an ordinary 2.0L I4). Cylinder count on its
+// own doesn't multiply power on top of that: a 2.0L I4 and a 2.0L V6 make
+// broadly similar real-world horsepower, not 50% more just for having two
+// extra cylinders at the same total displacement — cylinder count mostly
+// buys a higher *safe redline* in reality, which this simulator already
+// exposes as its own independent field (redlineRPM), so it isn't silently
+// double-counted here too. ~65 hp/liter is a reasonable naturally-aspirated
+// average across the whole 0.5-8.0L range this tool allows.
 export function estimatedPower(props) {
-  const cyl = Number(props.cylinders) || 4;
   const cc = Number(props.displacement) || 2000;
-  return Math.round(cyl * (cc / 1000) * 12);
+  return Math.round((cc / 1000) * 65);
 }
 
 // A turbo only matters once there's enough exhaust flow to spool it up, and
@@ -77,12 +86,14 @@ export const SUPERCHARGER_BOOST_MULT = 1.2;
 // the part a pure RPM×gearing formula was missing — horsepower is what
 // actually limits how fast the car can go. Real aerodynamic drag rises with
 // the *cube* of speed, so top speed roughly follows power^(1/3); the
-// constant here is tuned so a small hatchback tops out around 130-150 km/h
-// and a big V8 lands in supercar territory, not either one hitting 300+
-// on a tall enough gear regardless of how much engine it's got.
+// constant here (re-tuned alongside estimatedPower's cylinder-double-count
+// fix) lands a ~1L economy engine around 150 km/h, a 2.0L family engine
+// around 190, and an 8.0L monster around 300 — supercar territory, not
+// either one hitting 300+ on a tall enough gear regardless of how much
+// engine it's got.
 export function topSpeedFromPower(hp) {
   if (!hp || hp <= 0) return 0;
-  return 42 * Math.cbrt(hp);
+  return 38 * Math.cbrt(hp);
 }
 
 // Estimated fuel economy — same "plausible, not real physics" tier as
