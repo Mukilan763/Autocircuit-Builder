@@ -4,7 +4,22 @@
 // currently engaged, both built from computeDrivelineSummary() so they
 // never disagree with the gauges on the canvas.
 import { computeDrivelineSummary } from './mechSimulate.js';
+import { computeFuelEconomy, DRIVE_TYPE_MULT, TRAFFIC_MULT, ROAD_QUALITY_MULT } from './mechParts.js';
 import { unlock } from './achievements.js';
+
+const CONDITIONS_KEY = 'autocircuit-fuel-conditions';
+const DRIVE_TYPE_LABELS = { highway: '🛣️ Highway', city: '🏙️ City' };
+const TRAFFIC_LABELS = { light: '🟢 Light traffic', moderate: '🟡 Moderate traffic', heavy: '🔴 Heavy traffic' };
+const ROAD_QUALITY_LABELS = { smooth: '🛤️ Smooth road', average: '〰️ Average road', rough: '🪨 Rough road' };
+
+function loadConditions() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(CONDITIONS_KEY));
+    if (saved && saved.driveType) return saved;
+  } catch (e) { /* fall through to defaults */ }
+  return { driveType: 'highway', traffic: 'light', roadQuality: 'smooth' };
+}
+function saveConditions(c) { localStorage.setItem(CONDITIONS_KEY, JSON.stringify(c)); }
 
 const STAGE_COLORS = {
   engine: '#7c5cff',
@@ -72,7 +87,36 @@ function escapeHtml(s) {
   return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 }
 
-function buildBody(summary) {
+function selectHTML(id, labels, current) {
+  const opts = Object.entries(labels)
+    .map(([value, label]) => `<option value="${value}"${value === current ? ' selected' : ''}>${label}</option>`)
+    .join('');
+  return `<select id="${id}" class="select">${opts}</select>`;
+}
+
+// The fuel-economy section — its own conditions selectors (drive type,
+// traffic, road quality) plus the resulting estimate, all built from
+// computeFuelEconomy() so a build's displacement and its *actual* drivetrain
+// efficiency (the same number the waterfall above shows) both feed it,
+// rather than fuel economy being some disconnected, separately-tuned figure.
+function fuelEconomyHTML(summary, conditions) {
+  const { l100km, kmPerLiter } = computeFuelEconomy(summary.displacementCc, summary.overallEfficiency, conditions);
+  return `
+    <h4>⛽ Estimated fuel economy</h4>
+    <p class="panel-hint" style="margin-bottom:8px">How and where you drive changes this as much as the car itself does.</p>
+    <div class="fuel-conditions">
+      ${selectHTML('fuel-drive-type', DRIVE_TYPE_LABELS, conditions.driveType)}
+      ${selectHTML('fuel-traffic', TRAFFIC_LABELS, conditions.traffic)}
+      ${selectHTML('fuel-road', ROAD_QUALITY_LABELS, conditions.roadQuality)}
+    </div>
+    <div class="eff-stats cols-2">
+      <div class="eff-stat"><span class="eff-stat-value">${kmPerLiter.toFixed(1)}</span><span class="eff-stat-label">km per liter</span></div>
+      <div class="eff-stat"><span class="eff-stat-value">${l100km.toFixed(1)}</span><span class="eff-stat-label">liters / 100km</span></div>
+    </div>
+  `;
+}
+
+function buildBody(summary, conditions) {
   if (!summary.hasEngine) {
     return `<p class="eff-empty">🔧 Add an <strong>Engine</strong> to the canvas to see its power and efficiency here.</p>`;
   }
@@ -98,13 +142,16 @@ function buildBody(summary) {
     <h4>Speed vs. RPM in the current gear</h4>
     <p class="panel-hint" style="margin-bottom:6px">${gearNote}</p>
     <div class="eff-chart">${curveSVG(summary)}</div>
+    ${fuelEconomyHTML(summary, conditions)}
   `;
 }
 
 export function createEfficiencyPanel({ store, dom }) {
+  let conditions = loadConditions();
+
   function render() {
     const summary = computeDrivelineSummary(store.state);
-    dom.body.innerHTML = buildBody(summary);
+    dom.body.innerHTML = buildBody(summary, conditions);
     if (summary.topSpeedKmh >= 250) unlock('speed-demon');
   }
 
@@ -114,6 +161,17 @@ export function createEfficiencyPanel({ store, dom }) {
   });
   dom.closeBtn.addEventListener('click', () => dom.modal.classList.remove('open'));
   dom.modal.addEventListener('click', e => { if (e.target === dom.modal) dom.modal.classList.remove('open'); });
+
+  // The three condition <select>s live inside dom.body's regenerated
+  // innerHTML, so a listener bound directly to them would be lost on every
+  // re-render — delegating from the stable parent instead survives that.
+  dom.body.addEventListener('change', e => {
+    const field = { 'fuel-drive-type': 'driveType', 'fuel-traffic': 'traffic', 'fuel-road': 'roadQuality' }[e.target.id];
+    if (!field) return;
+    conditions = { ...conditions, [field]: e.target.value };
+    saveConditions(conditions);
+    render();
+  });
 
   // Keep it live while it's open, so dragging the throttle updates the graph.
   store.onChange(() => { if (dom.modal.classList.contains('open')) render(); });

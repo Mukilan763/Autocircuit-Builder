@@ -720,6 +720,7 @@ kbd {
 }
 
 .eff-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 6px; }
+.eff-stats.cols-2 { grid-template-columns: repeat(2, 1fr); max-width: 260px; }
 .eff-stat {
   display: flex; flex-direction: column; align-items: center; gap: 2px;
   background: linear-gradient(160deg, var(--surface-1), var(--surface-2)); border: 2px solid var(--border);
@@ -740,6 +741,9 @@ kbd {
   background: var(--surface-1); border: 2px solid var(--border); border-radius: var(--radius-md);
   padding: 8px 10px 4px;
 }
+
+.fuel-conditions { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.fuel-conditions .select { flex: 1; min-width: 130px; font-size: 12.5px; padding: 7px 10px; }
 
 /* ---------- community page ---------- */
 .community-area { flex: 1; overflow-y: auto; padding: 18px 22px; }

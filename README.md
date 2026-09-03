@@ -134,6 +134,19 @@ math the live gauges use (`computeDrivelineSummary` in
 Speedometer can never disagree, and it stays live while open — drag the
 throttle or shift gears and watch it move.
 
+**⛽ Estimated fuel economy**, in the same panel, right below the speed
+curve — km/L and L/100km, built from the engine's displacement and that
+*exact* drivetrain efficiency percentage the waterfall above already shows
+(a leakier clutch/gearbox genuinely costs you mileage here too, not just
+power). Three dropdowns — **drive type** (Highway/City), **traffic**
+(Light/Moderate/Heavy), and **road quality** (Smooth/Average/Rough) — each
+apply their own multiplier, stacked the same multiplicative way the
+performance mods do, and are remembered across visits. Same displacement
+and efficiency, worst case (city, heavy traffic, rough road) against best
+case (highway, light traffic, smooth road) can be a 3x swing in mileage —
+the point isn't to be a real fuel-consumption model, just to make "how and
+where you drive" visibly matter as much as the car itself does.
+
 **The Clutch Pedal works like a real one.** It's spring-engaged at rest —
 power flows by default — and *pressing and holding* it is what disengages
 the drivetrain so you can shift, exactly like a real clutch (this used to be

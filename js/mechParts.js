@@ -85,6 +85,37 @@ export function topSpeedFromPower(hp) {
   return 42 * Math.cbrt(hp);
 }
 
+// Estimated fuel economy — same "plausible, not real physics" tier as
+// topSpeedFromPower. Bigger engines drink more fuel per 100km, a leakier
+// drivetrain wastes some of that fuel before it ever reaches the wheels
+// (reuses the exact same overallEfficiency the power waterfall already
+// computes, so the two numbers can't disagree), and how/where you actually
+// drive matters *on top of* the car itself — city stop-start burns more
+// than a steady highway cruise, traffic makes either worse, and a rough
+// road adds rolling resistance. Every condition is a flat multiplier,
+// stacked multiplicatively — the same pattern as the turbo/nitrous/
+// supercharger boosts already use.
+export const DRIVE_TYPE_MULT = { highway: 0.85, city: 1.35 };
+export const TRAFFIC_MULT = { light: 1, moderate: 1.15, heavy: 1.35 };
+export const ROAD_QUALITY_MULT = { smooth: 1, average: 1.08, rough: 1.2 };
+
+export function computeFuelEconomy(displacementCc, overallEfficiencyPct, conditions) {
+  const displacementL = (Number(displacementCc) || 2000) / 1000;
+  let l100km = 5 + displacementL * 2.5;
+
+  // A drivetrain that only delivers 90% of the engine's power to the wheels
+  // needs proportionally more fuel to cover the same ground — floor at 40%
+  // so a pathologically lossy build doesn't blow this up to nonsense.
+  const eff = Math.max(40, Number(overallEfficiencyPct) || 100);
+  l100km *= 100 / eff;
+
+  l100km *= DRIVE_TYPE_MULT[conditions.driveType] ?? 1;
+  l100km *= TRAFFIC_MULT[conditions.traffic] ?? 1;
+  l100km *= ROAD_QUALITY_MULT[conditions.roadQuality] ?? 1;
+
+  return { l100km, kmPerLiter: l100km > 0 ? 100 / l100km : 0 };
+}
+
 // RPM -> road speed (km/h) for a given wheel diameter in inches, and its
 // inverse — used to cap both a wheel's own spin rate and any speedometer's
 // reading at whatever the engine's power can actually achieve, so a tiny

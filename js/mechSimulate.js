@@ -351,5 +351,6 @@ export function computeDrivelineSummary(state) {
     stages: power.stages, topSpeedKmh: power.topSpeedKmh,
     idle, redline, curve, gearLabel, inGear: !!gearRatio,
     currentRpm, currentSpeed,
+    displacementCc: Number(engine.props.displacement) || 2000,
   };
 }
