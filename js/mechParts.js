@@ -357,7 +357,10 @@ export const PART_DEFS_MECH = {
       { key: 'gearType', label: 'Gear Type', type: 'select', options: ['Standard', 'Close-Ratio', 'Off-Road'] },
       { key: 'efficiency', label: 'Efficiency (%)', type: 'number', min: 80, max: 100, step: 1 },
     ],
-    statusHint(props) {
+    statusHint(props, s) {
+      if (s && s.needsClutch) {
+        return '⚠ No engaged Clutch Pedal upstream — a manual gearbox can\'t couple to the engine without one, no matter what gear is selected. Wire a Clutch in between (pedal up = engaged).';
+      }
       const pos = props.position || 'N';
       if (pos === 'N') return 'In neutral — no power reaches the output.';
       const ratio = manualGearRatio(pos, props.gearCount, props.gearType);

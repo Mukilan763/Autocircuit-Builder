@@ -126,9 +126,11 @@ function buildBody(summary, conditions) {
   }
   const gearNote = summary.inGear
     ? `Currently in <strong>${escapeHtml(summary.gearLabel)}</strong> — the pink dot marks where you are on the curve right now.`
-    : summary.gearLabel
-      ? `<strong>${escapeHtml(summary.gearLabel)}</strong> selected — shift into a gear to see the speed curve.`
-      : `No transmission in this build yet — add one (and a differential) to see the speed curve.`;
+    : summary.transNeedsClutch
+      ? `⚠ This Manual Transmission has no engaged <strong>Clutch Pedal</strong> upstream — a manual gearbox can't couple to the engine without one. Wire one in between (pedal up = engaged).`
+      : summary.gearLabel
+        ? `<strong>${escapeHtml(summary.gearLabel)}</strong> selected — shift into a gear to see the speed curve.`
+        : `No transmission in this build yet — add one (and a differential) to see the speed curve.`;
 
   return `
     <div class="eff-stats">

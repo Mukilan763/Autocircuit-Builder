@@ -153,6 +153,18 @@ the drivetrain so you can shift, exactly like a real clutch (this used to be
 backwards: a plain toggle that defaulted to disengaged). Release it and
 drive resumes.
 
+**A Manual Transmission now genuinely needs a clutch** — this used to be
+missing entirely: a Manual Transmission worked fine wired directly to an
+Engine with no Clutch Pedal anywhere in the build, which a real manual
+gearbox simply can't do (there's no way to couple it to a running engine at
+all without one). Now, no engaged Clutch reachable upstream means the
+transmission stays effectively in neutral regardless of what gear is
+selected — the Inspector and the Efficiency panel both explain exactly
+what's missing rather than the car just silently not moving. An Automatic
+Transmission is unaffected (its torque converter/dual-clutch is modeled
+internally, exactly like a real one, so it was never missing an external
+part to begin with).
+
 **Gauges show real numbers, not just a needle.** The Engine has a Throttle
 slider — drag it and the Tachometer reads actual RPM live, glowing red and
 flashing past 6500 RPM. A Speedometer reads whatever RPM reaches it and

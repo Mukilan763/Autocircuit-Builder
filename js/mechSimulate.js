@@ -12,8 +12,9 @@ import {
 } from './mechParts.js';
 
 function key(compId, terminalId) { return compId + ':' + terminalId; }
+const EMPTY_SET = new Set();
 
-function buildGraph(components, wires) {
+function buildGraph(components, wires, disabledManualTrans = EMPTY_SET) {
   const adj = new Map();
   function ensure(k) { if (!adj.has(k)) adj.set(k, new Set()); return adj.get(k); }
   function addEdge(k1, k2) { ensure(k1).add(k2); ensure(k2).add(k1); }
@@ -30,8 +31,12 @@ function buildGraph(components, wires) {
       // Must agree with computeRpmNet's manualGearRatio check below — a
       // stale gear position left over from lowering the gear count (e.g.
       // '7' after switching to a 5-speed box) has to count as neutral in
-      // *both* graphs, or the wheel ends up "spinning" at 0 RPM.
-      if (manualGearRatio(c.props.position || 'N', c.props.gearCount, c.props.gearType) != null) {
+      // *both* graphs, or the wheel ends up "spinning" at 0 RPM. Also
+      // requires an actually-engaged Clutch somewhere in the powered path
+      // (see computeDisabledManualTrans) — a manual gearbox can't couple to
+      // a running engine at all without one, in this simulator same as in
+      // a real car.
+      if (!disabledManualTrans.has(c.id) && manualGearRatio(c.props.position || 'N', c.props.gearCount, c.props.gearType) != null) {
         addEdge(key(c.id, 'in'), key(c.id, 'out'));
       }
     } else if (c.type === 'autoTransmission') {
@@ -67,7 +72,7 @@ function bfs(seeds, adj) {
 // number instead of just an on/off needle. Reuses the same edge rules as
 // buildGraph, but as a weighted graph (multiplier per edge) walked with a
 // value-carrying BFS instead of a plain reachability one.
-function computeRpmNet(components, wires) {
+function computeRpmNet(components, wires, disabledManualTrans = EMPTY_SET) {
   const adj = new Map();
   function ensure(k) { if (!adj.has(k)) adj.set(k, []); return adj.get(k); }
   function addEdge(k1, k2, mult) { ensure(k1).push({ to: k2, mult }); ensure(k2).push({ to: k1, mult: 1 / mult }); }
@@ -80,7 +85,7 @@ function computeRpmNet(components, wires) {
       if (engaged) addEdge(key(c.id, 'in'), key(c.id, 'out'), 1);
     } else if (c.type === 'manualTransmission') {
       const ratio = manualGearRatio(c.props.position || 'N', c.props.gearCount, c.props.gearType);
-      if (ratio != null) addEdge(key(c.id, 'in'), key(c.id, 'out'), 1 / ratio);
+      if (!disabledManualTrans.has(c.id) && ratio != null) addEdge(key(c.id, 'in'), key(c.id, 'out'), 1 / ratio);
     } else if (c.type === 'autoTransmission') {
       const pos = c.props.position || 'P';
       if (pos === 'D') addEdge(key(c.id, 'in'), key(c.id, 'out'), 1 / (Number(c.props.ratio) || 2));
@@ -117,8 +122,32 @@ function computeRpmNet(components, wires) {
 // just present on the canvas) — used to build a representative drivetrain
 // "path" for the efficiency stages without needing full path tracing,
 // which is exact for the typical single-path builds this tool is for.
-function findEngaged(components, type, driveNet) {
-  return components.find(c => c.type === type && driveNet.has(key(c.id, 'in')));
+// `disabledIds` excludes components whose internal edge got suppressed for
+// a reason `driveNet` reachability alone can't see — a manual transmission
+// with no engaged Clutch upstream, say, whose `in` terminal is still
+// powered by the wire leading into it even though nothing passes through.
+function findEngaged(components, type, driveNet, disabledIds = EMPTY_SET) {
+  return components.find(c => c.type === type && !disabledIds.has(c.id) && driveNet.has(key(c.id, 'in')));
+}
+
+// A manual transmission can't do anything without an actually-engaged
+// Clutch somewhere in the powered path feeding it — in a real car that's
+// not optional equipment, it's how the gearbox couples to the engine at
+// all. Runs reachability once with every manual transmission's edge
+// tentatively live to see whether an engaged clutch is anywhere in that
+// preliminary drive network; if not, every manual transmission in the
+// build gets disabled for the *real* pass. (If the build has zero Clutch
+// parts and zero manual transmissions, this is just an empty set — no
+// behavior change for automatics, which model their torque converter/
+// dual-clutch internally and never needed an external clutch part.)
+function computeDisabledManualTrans(components, wires, driveSeeds) {
+  const manualTransIds = components.filter(c => c.type === 'manualTransmission').map(c => c.id);
+  if (!manualTransIds.length) return EMPTY_SET;
+  const prelimNet = bfs(driveSeeds, buildGraph(components, wires));
+  const hasEngagedClutchInPath = components.some(c =>
+    c.type === 'clutch' && prelimNet.has(key(c.id, 'in')) && prelimNet.has(key(c.id, 'out'))
+  );
+  return hasEngagedClutchInPath ? EMPTY_SET : new Set(manualTransIds);
 }
 
 // The car's power-limited top speed, and how it got there: the strongest
@@ -130,7 +159,7 @@ function findEngaged(components, type, driveNet) {
 // topSpeedFromPower's comment. Shared by simulate() (so the live gauges
 // reflect it) and computeDrivelineSummary() (so the graph shows the exact
 // same numbers).
-function computeEffectivePower(components, driveNet, rpmNet) {
+function computeEffectivePower(components, driveNet, rpmNet, disabledManualTrans = EMPTY_SET) {
   let engine = null;
   let baseHp = 0;
   for (const c of components) {
@@ -149,7 +178,7 @@ function computeEffectivePower(components, driveNet, rpmNet) {
     mult *= pct / 100;
     stages.push({ key: 'clutch', label: clutch.props.label || 'Clutch', pct });
   }
-  const manual = findEngaged(components, 'manualTransmission', driveNet);
+  const manual = findEngaged(components, 'manualTransmission', driveNet, disabledManualTrans);
   const auto = manual ? null : findEngaged(components, 'autoTransmission', driveNet);
   if (manual) {
     const pct = Number(manual.props.efficiency) || 96;
@@ -218,11 +247,12 @@ function getSeeds(components) {
 export function simulate(state) {
   const { components, wires } = state;
   const { driveSeeds, brakeSeeds } = getSeeds(components);
-  const adj = buildGraph(components, wires);
+  const disabledManualTrans = computeDisabledManualTrans(components, wires, driveSeeds);
+  const adj = buildGraph(components, wires, disabledManualTrans);
   const driveNet = bfs(driveSeeds, adj);
   const brakeNet = bfs(brakeSeeds, adj);
-  const rpmNet = computeRpmNet(components, wires);
-  const { topSpeedKmh } = computeEffectivePower(components, driveNet, rpmNet);
+  const rpmNet = computeRpmNet(components, wires, disabledManualTrans);
+  const { topSpeedKmh } = computeEffectivePower(components, driveNet, rpmNet, disabledManualTrans);
 
   const compStates = {};
   for (const c of components) {
@@ -250,6 +280,11 @@ export function simulate(state) {
       compStates[c.id] = { rpm: engineRpm(c.props) };
     } else if (c.type === 'brakePedal' || c.type === 'parkingBrake') {
       compStates[c.id] = {}; // these render straight off their own props.on
+    } else if (c.type === 'manualTransmission') {
+      compStates[c.id] = {
+        active: driveNet.has(key(c.id, 'in')) && driveNet.has(key(c.id, 'out')),
+        needsClutch: disabledManualTrans.has(c.id),
+      };
     } else {
       const net = BRAKE_TYPES_MECH.has(c.type) ? brakeNet : driveNet;
       compStates[c.id] = { active: net.has(key(c.id, 'in')) };
@@ -297,18 +332,23 @@ export function computeDrivelineSummary(state) {
   if (!anyEngine) return { hasEngine: false };
 
   const { driveSeeds } = getSeeds(components);
-  const adj = buildGraph(components, wires);
+  const disabledManualTrans = computeDisabledManualTrans(components, wires, driveSeeds);
+  const adj = buildGraph(components, wires, disabledManualTrans);
   const driveNet = bfs(driveSeeds, adj);
-  const rpmNet = computeRpmNet(components, wires);
-  const power = computeEffectivePower(components, driveNet, rpmNet);
+  const rpmNet = computeRpmNet(components, wires, disabledManualTrans);
+  const power = computeEffectivePower(components, driveNet, rpmNet, disabledManualTrans);
 
   if (!power.engine) {
     return { hasEngine: true, running: false, baseHp: estimatedPower(anyEngine.props) };
   }
   const engine = power.engine;
 
-  const manual = findEngaged(components, 'manualTransmission', driveNet);
+  const manual = findEngaged(components, 'manualTransmission', driveNet, disabledManualTrans);
   const auto = manual ? null : findEngaged(components, 'autoTransmission', driveNet);
+  // A manual transmission exists but got disabled for lack of an engaged
+  // Clutch upstream — distinct from "no transmission at all" so the panel
+  // can say exactly what's missing instead of a generic message.
+  const transNeedsClutch = !manual && components.some(c => c.type === 'manualTransmission' && disabledManualTrans.has(c.id));
   const diff = findEngaged(components, 'differential', driveNet);
   const diffRatio = diff ? (Number(diff.props.finalDriveRatio) || 3.7) : 1;
 
@@ -349,7 +389,7 @@ export function computeDrivelineSummary(state) {
     baseHp: Math.round(power.baseHp), effectiveHp: Math.round(power.effectiveHp),
     overallEfficiency: power.overallEfficiency, boosted: power.boosted,
     stages: power.stages, topSpeedKmh: power.topSpeedKmh,
-    idle, redline, curve, gearLabel, inGear: !!gearRatio,
+    idle, redline, curve, gearLabel, inGear: !!gearRatio, transNeedsClutch,
     currentRpm, currentSpeed,
     displacementCc: Number(engine.props.displacement) || 2000,
   };
