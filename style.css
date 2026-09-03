@@ -79,8 +79,8 @@
   --surface-1: #151837;
   --surface-2: #1c2047;
   --surface-3: #10122a;
-  --border: #26295c;
-  --border-soft: #26295c;
+  --border: #33235c;
+  --border-soft: #33235c;
   --text: #e6fbff;
   --text-dim: #7fa3c9;
   --accent: #00f0ff;
@@ -632,6 +632,69 @@ kbd {
 .achievement-emoji { font-size: 24px; text-align: center; }
 .achievement-text { font-size: 13px; color: var(--text-dim); line-height: 1.4; }
 .achievement-text strong { color: var(--text); font-size: 13.5px; }
+
+/* ---------- cyberpunk (the Neon theme, turned up) ----------
+   Everything here is either perfectly static or moves on a multi-second
+   cycle — deliberately, since the ask was "cyberpunkish, not
+   strobophobic": no brightness/opacity flashing, nothing faster than a
+   slow breathing pulse (~0.25Hz, nowhere near the ~3Hz flash-safety
+   threshold), and hover effects fire once rather than looping. All of it
+   already inherits the global `prefers-reduced-motion` rule above, which
+   clamps every animation/transition here to instant. */
+:root[data-theme="neon"] body {
+  position: relative;
+}
+:root[data-theme="neon"] body::after {
+  content: '';
+  position: fixed; inset: 0; z-index: 999; pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(180, 240, 255, 0.05) 0px,
+    rgba(180, 240, 255, 0.05) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  mix-blend-mode: overlay;
+}
+/* Chromatic-aberration "RGB split" on headings and the brand mark — a
+   static double text-shadow, not an animation, so it never flickers. */
+:root[data-theme="neon"] .brand,
+:root[data-theme="neon"] h2,
+:root[data-theme="neon"] .modal-card h2 {
+  text-shadow: 1.5px 0 var(--accent-2), -1.5px 0 var(--accent);
+}
+:root[data-theme="neon"] .brand {
+  background: linear-gradient(90deg, var(--accent-2), var(--accent) 55%, var(--accent-3));
+}
+/* A slow ambient glow on the loudest accent surfaces — alive, not manic. */
+:root[data-theme="neon"] .tab-btn.active,
+:root[data-theme="neon"] .btn.accent {
+  animation: neon-breathe 3.6s ease-in-out infinite;
+}
+@keyframes neon-breathe {
+  0%, 100% { box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 55%, transparent), 0 0 22px color-mix(in srgb, var(--accent-2) 30%, transparent); }
+  50% { box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 80%, transparent), 0 0 36px color-mix(in srgb, var(--accent-2) 50%, transparent); }
+}
+:root[data-theme="neon"] .panel,
+:root[data-theme="neon"] .canvas-area,
+:root[data-theme="neon"] .build-card {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent), 0 6px 20px rgba(0, 0, 0, .5);
+}
+/* One-shot glitch skew on hover — a quick single pass (not a loop), so it
+   reads as "circuitry hiccup" rather than a flashing light. */
+@keyframes neon-glitch {
+  0% { transform: none; filter: none; }
+  20% { transform: translate(-1.5px, .5px) skewX(2deg); filter: hue-rotate(8deg); }
+  45% { transform: translate(1.5px, -.5px) skewX(-2deg); filter: hue-rotate(-8deg); }
+  70% { transform: translate(-1px, 0) skewX(1deg); filter: none; }
+  100% { transform: none; filter: none; }
+}
+:root[data-theme="neon"] .btn:hover:not(:disabled),
+:root[data-theme="neon"] .tab-btn:hover,
+:root[data-theme="neon"] .palette-item:hover,
+:root[data-theme="neon"] .build-card:hover {
+  animation: neon-glitch .28s linear;
+}
 
 /* ---------- welcome modal ---------- */
 .welcome-card { max-width: 480px; text-align: center; }

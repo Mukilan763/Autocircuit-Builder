@@ -236,7 +236,14 @@ before first paint so there's no flash-of-wrong-theme) switches between five
 full palettes, not just a light/dark toggle:
 
 - **☀️ Light** and **🌙 Dark** — the conventional pair.
-- **🌆 Neon** — near-black with cyan/magenta/yellow accents, a synthwave look.
+- **🌆 Cyberpunk** — near-black with cyan/magenta/acid-yellow accents, and
+  the app's most overtly "themed" mode: a subtle static CRT scanline
+  overlay, chromatic-aberration (RGB-split) text on headings and the brand
+  mark, a slow ~4s ambient neon glow "breathing" on the loudest buttons and
+  the active tab, and a one-shot glitch-skew wiggle on hover — a quick
+  single pass, not a loop. Deliberately nothing here flashes or strobes:
+  every effect is either static or moves on a multi-second cycle, and
+  `prefers-reduced-motion` turns all of it off regardless.
 - **📐 Blueprint** — deep engineering-blue background with white "ink" lines
   and a dotted grid, styled after an actual blueprint sheet.
 - **🍬 Candy** — soft pink/white with a hot-pink accent.

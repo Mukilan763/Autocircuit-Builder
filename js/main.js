@@ -160,7 +160,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 });
 
 // ------------------------------------------------------------ Theme picker
-// Five color themes — not just dark/light: Neon and Blueprint deliberately
+// Five color themes — not just dark/light: Cyberpunk and Blueprint deliberately
 // don't look like a conventional app. Every color in style.css reads from
 // a CSS custom property, so switching themes is just swapping the
 // `data-theme` attribute on <html>; nothing else needs to know.
