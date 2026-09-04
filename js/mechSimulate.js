@@ -14,7 +14,7 @@ import {
 function key(compId, terminalId) { return compId + ':' + terminalId; }
 const EMPTY_SET = new Set();
 
-function buildGraph(components, wires, disabledManualTrans = EMPTY_SET) {
+function buildGraph(components, wires, disabledManualTrans = EMPTY_SET, optimistic = false) {
   const adj = new Map();
   function ensure(k) { if (!adj.has(k)) adj.set(k, new Set()); return adj.get(k); }
   function addEdge(k1, k2) { ensure(k1).add(k2); ensure(k2).add(k1); }
@@ -25,7 +25,11 @@ function buildGraph(components, wires, disabledManualTrans = EMPTY_SET) {
   for (const c of components) {
     if (GATED_PASS_TYPES_MECH.has(c.type)) {
       const def = PART_DEFS_MECH[c.type];
-      const engaged = def.invertedGate ? !c.props.on : c.props.on;
+      // `optimistic` assumes every driver-adjustable gate (pedal, gear
+      // selector) is in its best/engaged position — used only to test
+      // whether a wheel could *ever* be reached by this wiring, not
+      // whether it currently is. See computeWheelReachable.
+      const engaged = optimistic || (def.invertedGate ? !c.props.on : c.props.on);
       if (engaged) addEdge(key(c.id, 'in'), key(c.id, 'out'));
     } else if (c.type === 'manualTransmission') {
       // Must agree with computeRpmNet's manualGearRatio check below — a
@@ -35,13 +39,14 @@ function buildGraph(components, wires, disabledManualTrans = EMPTY_SET) {
       // requires an actually-engaged Clutch somewhere in the powered path
       // (see computeDisabledManualTrans) — a manual gearbox can't couple to
       // a running engine at all without one, in this simulator same as in
-      // a real car.
-      if (!disabledManualTrans.has(c.id) && manualGearRatio(c.props.position || 'N', c.props.gearCount, c.props.gearType) != null) {
+      // a real car. disabledManualTrans still applies even when optimistic
+      // — no gear selection fixes a structurally-missing clutch.
+      if (!disabledManualTrans.has(c.id) && (optimistic || manualGearRatio(c.props.position || 'N', c.props.gearCount, c.props.gearType) != null)) {
         addEdge(key(c.id, 'in'), key(c.id, 'out'));
       }
     } else if (c.type === 'autoTransmission') {
       const pos = c.props.position || 'P';
-      if (pos === 'D' || pos === 'R') addEdge(key(c.id, 'in'), key(c.id, 'out'));
+      if (optimistic || pos === 'D' || pos === 'R') addEdge(key(c.id, 'in'), key(c.id, 'out'));
     } else if (c.type === 'differential') {
       addEdge(key(c.id, 'in'), key(c.id, 'outL'));
       addEdge(key(c.id, 'in'), key(c.id, 'outR'));
@@ -150,6 +155,26 @@ function computeDisabledManualTrans(components, wires, driveSeeds) {
   return hasEngagedClutchInPath ? EMPTY_SET : new Set(manualTransIds);
 }
 
+// Whether an engine's power could reach ANY wheel at all in the best case —
+// clutch pedal up, every transmission shifted into some gear — as opposed
+// to whether it currently does. That distinction matters: a fully-wired,
+// working drivetrain just sitting in Neutral/Park is a normal, transient
+// state (fixable by shifting), and computeEffectivePower's stats below are
+// deliberately gear-independent "capacity" numbers, not a literal reading
+// of the current instant. But an actual gap — a wire that never got
+// reconnected after deleting a part, a manual transmission with no clutch
+// anywhere in the build, an engine wired to nothing at all — means no gear
+// selection can ever fix it, so reporting the engine's full undiminished
+// output as "at the wheels" would be flatly wrong, not just optimistic.
+// Builds with no wheel at all (e.g. bench-testing just an engine+clutch)
+// aren't judged either way.
+function computeWheelReachable(components, wires, driveSeeds, disabledManualTrans) {
+  const wheels = components.filter(c => c.type === 'wheel');
+  if (!wheels.length) return true;
+  const optimisticNet = bfs(driveSeeds, buildGraph(components, wires, disabledManualTrans, true));
+  return wheels.some(w => optimisticNet.has(key(w.id, 'drive')));
+}
+
 // The car's power-limited top speed, and how it got there: the strongest
 // running engine's horsepower, run through whichever clutch/transmission/
 // differential are actually engaged (each bleeding a bit of power per its
@@ -159,7 +184,7 @@ function computeDisabledManualTrans(components, wires, driveSeeds) {
 // topSpeedFromPower's comment. Shared by simulate() (so the live gauges
 // reflect it) and computeDrivelineSummary() (so the graph shows the exact
 // same numbers).
-function computeEffectivePower(components, driveNet, rpmNet, disabledManualTrans = EMPTY_SET) {
+function computeEffectivePower(components, driveNet, rpmNet, disabledManualTrans = EMPTY_SET, wheelReachable = true) {
   let engine = null;
   let baseHp = 0;
   for (const c of components) {
@@ -170,6 +195,16 @@ function computeEffectivePower(components, driveNet, rpmNet, disabledManualTrans
   }
   const stages = [{ key: 'engine', label: 'Engine', pct: 100 }];
   if (!engine) return { baseHp: 0, effectiveHp: 0, boosted: false, topSpeedKmh: 0, stages, overallEfficiency: 100 };
+
+  // See computeWheelReachable: if no wheel could ever be reached by this
+  // wiring — not even in the best case — 0 hp gets there, not the engine's
+  // undiminished output. Reporting baseHp here (as the loop below would,
+  // by simply finding no clutch/trans stage to apply a loss for) would
+  // flatly contradict a "can't couple"/broken-wiring warning shown right
+  // next to it.
+  if (!wheelReachable) {
+    return { baseHp, effectiveHp: 0, boosted: false, engine, topSpeedKmh: 0, stages: [stages[0]], overallEfficiency: 0 };
+  }
 
   let mult = 1;
   const clutch = findEngaged(components, 'clutch', driveNet);
@@ -252,7 +287,8 @@ export function simulate(state) {
   const driveNet = bfs(driveSeeds, adj);
   const brakeNet = bfs(brakeSeeds, adj);
   const rpmNet = computeRpmNet(components, wires, disabledManualTrans);
-  const { topSpeedKmh } = computeEffectivePower(components, driveNet, rpmNet, disabledManualTrans);
+  const wheelReachable = computeWheelReachable(components, wires, driveSeeds, disabledManualTrans);
+  const { topSpeedKmh } = computeEffectivePower(components, driveNet, rpmNet, disabledManualTrans, wheelReachable);
 
   const compStates = {};
   for (const c of components) {
@@ -336,7 +372,8 @@ export function computeDrivelineSummary(state) {
   const adj = buildGraph(components, wires, disabledManualTrans);
   const driveNet = bfs(driveSeeds, adj);
   const rpmNet = computeRpmNet(components, wires, disabledManualTrans);
-  const power = computeEffectivePower(components, driveNet, rpmNet, disabledManualTrans);
+  const wheelReachable = computeWheelReachable(components, wires, driveSeeds, disabledManualTrans);
+  const power = computeEffectivePower(components, driveNet, rpmNet, disabledManualTrans, wheelReachable);
 
   if (!power.engine) {
     return { hasEngine: true, running: false, baseHp: estimatedPower(anyEngine.props) };

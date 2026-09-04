@@ -169,6 +169,18 @@ Transmission is unaffected (its torque converter/dual-clutch is modeled
 internally, exactly like a real one, so it was never missing an external
 part to begin with).
 
+**The Efficiency panel no longer contradicts its own warning.** A build
+with a broken drivetrain — no Clutch anywhere, or just a wire that never
+got reconnected after deleting a part — used to still show the engine's
+full undiminished horsepower as "at the wheels," 100% drivetrain
+efficiency, and a real top speed, right next to a banner explaining the
+gearbox can't couple to the engine at all. It now correctly shows 0 hp at
+the wheels, 0% efficiency, and 0 km/h whenever no wheel could be reached
+even in the best case (clutch up, every gearbox shifted into gear). A
+fully-wired, working drivetrain just sitting in Neutral or Park is
+unaffected — that's normal and fixable by shifting, so it still shows what
+the car's capable of once you do.
+
 **Gauges show real numbers, not just a needle.** The Engine has a Throttle
 slider — drag it and the Tachometer reads actual RPM live, glowing red and
 flashing past 6500 RPM. A Speedometer reads whatever RPM reaches it and
