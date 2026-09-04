@@ -2,6 +2,8 @@
 
 **🚀 Live: [autocircuit-builder.onrender.com](https://autocircuit-builder.onrender.com)**
 
+![A live turn-signal relay circuit built in AutoCircuit Builder](screenshot.png)
+
 A tiny, browser-based tool with **two workbenches** for building and
 simulating how a car actually works:
 
